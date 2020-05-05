@@ -42,43 +42,8 @@ parb_reps <- bootstrap_glmm(obj.glmerMod,
                             B = 1000,
                             method = "parb")
 
-
-confint.glmmBoot <- function(obj, 
-                             parm, 
-                             level = 0.95,
-                             boot.method = c("rwlb","parb"),
-                             boot.type = c("percentile","studentized","norm"), ...) {
-  
-  # if(inherits(obj, "glmerMod")) {
-  #   boot.method <- match.arg(boot.method)
-  #   tmp <- bootstrap_glmm(obj.glmerMod,
-  #                         B = 1000,
-  #                         method = boot.method)
-  # } else if (inherits(obj, "glmerMod")){
-    tmp <- obj
-  # }
-  # extract_estimates(tmp)
-  
-  boot.type <- match.arg(boot.type)
-  
-  if(boot.type=="percentile"){
-    summary_boot <- tmp$replicates %>% 
-      group_by(Parameters) %>% 
-      # TODO: add options to select parameters
-      summarise(Estimate     = mean(Estimates),
-                Std_Errors   =  sd(Estimates), 
-                ci_lower     = quantile(Estimates, prob = (1-level)/2), 
-                ci_upper     = quantile(Estimates, prob = (1+level)/2)) %>% 
-      ungroup()
-  } else if (boot.type == "studentized"){
-    # TODO
-  }
-  summary_boot
-}
-
 confint(rwlb_reps, boot.method = "rwlb", boot.type = "percentile")
 confint(parb_reps, boot.method = "parb", boot.type = "percentile")
-
 
 parb_reps %>% 
   group_by(Parameters) %>% 
