@@ -48,7 +48,8 @@ extract_info.glmerMod <-  function(obj, data = epilepsy, ...){
 
 #' @title extract_estimates: extracts estimates of `glmmTMB`` and `glmerMod` objects in a tidy way
 #'
-#' @param obj Object of class `glmerMod` resulting from estimation with `lme4::glmer()`
+#' @param obj Object 
+#' 
 #' @param data Original dataset. TODO: make it general by extracting it from `obj`
 #' @param ... other arguments 
 #' @examples
@@ -351,7 +352,16 @@ simulate_glmm <- function(obj,
   
 }
 
-
+#' @title simulate_glmm: simulates 
+#'
+#' @param obj Object of class `glmerMod` resulting from estimation with `lme4::glmer()`
+#' @param data Original dataset. TODO: make it general by extracting it from `obj`
+#' @param ... other arguments 
+#' @examples
+#' @rdname glmmBoot
+#' @export
+#' @import lme4
+# TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
 bootstrap_glmm <- function(obj, 
                            B = 1000, 
                            data = epilepsy,
@@ -409,40 +419,70 @@ bootstrap_glmm <- function(obj,
   class = "glmmBoot")
 }
 
-
+#' @title simulate_glmm: simulates 
+#'
+#' @param obj Object of class `glmerMod` resulting from estimation with `lme4::glmer()`
+#' @param data Original dataset. TODO: make it general by extracting it from `obj`
+#' @param ... other arguments 
+#' @examples
+#' @rdname glmmBoot
+#' @export
+#' @import lme4
+# TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
 confint.glmmBoot <- function(obj, 
-                             parm, 
                              level = 0.95,
-                             boot.method = c("rwlb","parb"),
-                             boot.type = c("percentile","studentized","norm"), ...) {
+                             subset_parameters=NULL, 
+                             bootstrap_method = c("rwlb","parb"),
+                             bootstrap_type = c("percentile","studentized","norm"), ...) {
   
-  # if(inherits(obj, "glmerMod")) {
-  #   boot.method <- match.arg(boot.method)
-  #   tmp <- bootstrap_glmm(obj.glmerMod,
-  #                         B = 1000,
-  #                         method = boot.method)
-  # } else if (inherits(obj, "glmerMod")){
-  tmp <- obj
-  # }
-  # extract_estimates(tmp)
+  tmp <- obj$replicates
+  
+  
+  if(!is.null(subset_parameters)) tmp <- tmp %>% filter(Parameters %in% subset_parameters)
   
   boot.type <- match.arg(boot.type)
-  
   if(boot.type=="percentile"){
-    summary_boot <- tmp$replicates %>% 
-      group_by(Parameters) %>% 
-      # TODO: add options to select parameters
+    summary_boot <- tmp %>% 
+      group_by(Parameters) %>%
       summarise(Estimate     = mean(Estimates),
-                Std_Errors   =  sd(Estimates), 
+                Std_Errors   = sd(Estimates), 
                 ci_lower     = quantile(Estimates, prob = (1-level)/2), 
                 ci_upper     = quantile(Estimates, prob = (1+level)/2)) %>% 
       ungroup()
   } else if (boot.type == "studentized"){
-    # TODO
+    est <- estimate_glmm(obj$model_object)
+    
+    tmp <- tmp %>% inner_join(est, by =c("Parameters"),   suffix=c("_star", "_hat"))
+    
+    
+    stud_quant <-  function(x_star, sd_x_star, x_hat, sd_x_hat, prob, ...){
+      t_star <-  (x_star-x_hat)/sd_x_star
+      z <-  quantile(t_star, prob, ...)
+      x_hat + z*sd_x_hat
+    }
+    
+    summary_boot <- tmp %>% 
+      group_by(Parameters) %>%
+      summarise(Estimate     = mean(Estimates_star),
+                Std_Errors   = sd(Estimates_star), 
+                ci_lower     = mean(stud_quant(Estimates_star, Std..Errors_star, 
+                                             Estimates_hat , Std..Errors_hat, prob = (1-level)/2)), 
+                ci_upper     = mean(stud_quant(Estimates_star, Std..Errors_star, 
+                                             Estimates_hat, Std..Errors_hat, prob = (1+level)/2))) %>% 
+      ungroup()
   }
   summary_boot
 }
 
+#' @title show_progress: simulates 
+#'
+#' @param obj Object of class `glmerMod` resulting from estimation with `lme4::glmer()`
+#' @param data Original dataset. TODO: make it general by extracting it from `obj`
+#' @param ... other arguments 
+#' @examples
+#' @rdname glmmBoot
+#' @import lme4
+# TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
 show_progress <- function(x, B) {
   if (x%%(B/20)==0) {
     message("Progress: ", paste(rep("=", times=(x/(B/20)))), paste(rep(" ", times=(20-x/(B/20)))), x/B*100,"%")
