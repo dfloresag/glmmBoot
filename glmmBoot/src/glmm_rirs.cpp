@@ -51,7 +51,11 @@
       res-= w[i]*dbinom(y[ij],Type(1),Type(1/(1+exp(-eta[ij]))),1);
     } else if (family==1){
       res -= w[i]*dpois(y[ij], Type(exp(eta[ij])),1); 
-    }
+    } 
+    // else if (family==3){
+    //   res -= w[i]*dnorm(y[ij], Type(eta[ij]), Type phi ,1); 
+    // }
+      
   }
   return res;
   }

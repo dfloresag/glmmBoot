@@ -1,33 +1,70 @@
-Untitled
+Example of Use
 ================
 
-## GitHub Documents
+[(Flores-Agreda and Cantoni, Under
+Review)](https://www.researchgate.net/publication/315768128_Bootstrapping_Generalized_Linear_Mixed_Models_via_a_Weighted_Laplace_Approximation)
 
-This is an R Markdown format used for publishing markdown documents to
-GitHub. When you click the **Knit** button all R code chunks are run and
-a markdown file (.md) suitable for publishing to GitHub is generated.
+To further illustrate the Bootstrapping method and see the breadth of
+our approach in a real-data context, we consider an application in yet
+another setting on the  dataset found in [Molenberghs & Verbeke
+(2006)](https://www.springer.com/gp/book/9780387251448) and fully
+reported in [Faught et. al.
+(1996)](https://www.ncbi.nlm.nih.gov/pubmed/8649570). According to these
+references, a longitudinal model was considered to study the effects of
+an new anti-epileptic drug (AED) compared to a placebo on the number of
+seizures patients experimented during the study.
 
-## Including Code
+% After that period, 45 patients were assigned to the placebo group, 44
+to the active (new) treatment group. 89 Patients were assigned to either
+group (placebo or treatment), measured on a weekly basis and followed
+during 16 weeks, after which they were entered into a longer-term study
+with the number of visits ranging between 2 and 27 weeks, hence making
+clusters variable in size. % The out- come of interest is the number of
+epileptic seizures experienced during the last week, i.e., since the
+last time the outcome was measured. The key re- search question is
+whether or not the additional new treatment reduces the number of
+epileptic seizures.
 
-You can include R code in the document as follows:
+We consider a mixed Poisson model for the outcome containing two
+potentially correlated random effects affecting the intercept and the
+slope throughout the visit time i.e.
+\(y_{ij}|\bu_i\sim \mathcal{P}(\lambda_{ij})\) with
+\(\log(\lambda_{ij}) = \beta_0 + \beta_{1} T_{ij} + \beta_{2}t_{ij} + \beta_{3} T_{ij}t_{ij} + \sigma_{1} u_{i1} + \sigma_{2} u_{i2} t_{ij}\),
+where \(T_{ij}\) represents the effect of the treatment and \(t_{ij}\)
+the visit time. In particular, the variance-covariance structure of the
+vector of Gaussian random effects \(\bu_i = [u_{i1}, u_{i2}]^T\), will
+allow the presence of a correlation coefficient \(\rho\). %
+\(\mathbf{D}(\bsigma) = \left[\begin{array}{c c} \sigma_{1}^2 & \rho\sigma_{1}\sigma_{2} \\ \rho\sigma_{1}\sigma_{2} & \sigma_{2}^2 \end{array}\right]\).
 
-``` r
-summary(cars)
-```
+Analysis has been performed using TMB to provide LAML estimates and
+their Standard Errors obtained via numerical approximations of the
+required derivatives of the LALL, while RWLB and PB replicates of the
+model parameters were generated using the previously described
+algorithms. % It is important to point out that LAML estimates do not
+necessarily constitute  values but work more as a point of reference, as
+a more accurate estimation could be obtained with AGQ, which, to the
+best of our knoweledge, is not implemented for models with more than one
+random effect in packages such as . The more accurate AGQ estimate is
+unavailable in software for models with a random slope, therefore, only
+our LAML is available.
 
-    ##      speed           dist       
-    ##  Min.   : 4.0   Min.   :  2.00  
-    ##  1st Qu.:12.0   1st Qu.: 26.00  
-    ##  Median :15.0   Median : 36.00  
-    ##  Mean   :15.4   Mean   : 42.98  
-    ##  3rd Qu.:19.0   3rd Qu.: 56.00  
-    ##  Max.   :25.0   Max.   :120.00
+The Bootstrap distributions were then used to construct (i) Estimates of
+the Parameters, by averaging over the replicates (ii) Estimates of the
+Standard Errors by computing the standard deviations for each
+distribution and (iii) percentile-based Confidence Intervals (CI) with a
+level of \(1-\alpha = 0.95\).
 
-## Including Plots
-
-You can also embed plots, for example:
-
-![](README_files/figure-gfm/pressure-1.png)<!-- -->
-
-Note that the `echo = FALSE` parameter was added to the code chunk to
-prevent printing of the R code that generated the plot.
+The first three columns of Table  display the LAML estimates and the
+averages of the Bootstrap distributions. The Bootstrap methods seem to
+provide very similar values as LAML for all parameters, implying that
+the distributions are pretty much centered around these estimates. The
+three remaining columns in Table  contain the estimates of the Standard
+Errors. Here we see that the bootstrap methods compute estimates that
+are on the same order as the results estimated asymptotic S.E. based on
+the Laplace Approximation for fixed effects, albeit slightly lower in
+the case of \(\beta_0\) and \(\beta_2\). When the focus shifts towards
+the variance components however, the bootstrap methods display larger
+values than those estimated based on the asymptotic LAML inference.
+Between these two alternatives, the RWLB displays systematically more
+dispersion, which is consistent with the remarks provided in the
+previous sections.

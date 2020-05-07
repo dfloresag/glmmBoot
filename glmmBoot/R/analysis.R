@@ -29,7 +29,7 @@ obj.glmmTMB <- glmmTMB(nseizw~ trt*studyweek + (studyweek|id),
                        data = epilepsy)
 
 estimates_1 <-  extract_estimates(obj.glmerMod)
-estimates_2 <-  extract_estimates(obj.glmerMod)
+estimates_2 <-  extract_estimates(obj.glmmTMB)
 estimates_3 <-  estimate_glmm(obj.glmerMod)
 
 ## Bootstrap inference 
@@ -42,8 +42,33 @@ parb_reps <- bootstrap_glmm(obj.glmerMod,
                             B = 1000,
                             method = "parb")
 
-confint(rwlb_reps, boot.method = "rwlb", boot.type = "percentile")
-confint(parb_reps, boot.method = "parb", boot.type = "percentile")
+rwlb_reps %>% confint(bootstrap_type = "percentile") 
+parb_reps %>% confint(bootstrap_type = "percentile")
+rwlb_reps %>% confint(bootstrap_type = "studentized")
+parb_reps %>% confint(bootstrap_type = "studentized")
+
+
+plot.glmmBoot <- function(obj, parm_subset = NULL, ...){
+
+  # TODO: separate between fixed and random effect parameters
+  
+  tmp <- obj$replicates
+  
+  if(!is.null(parm_subset)) tmp <- tmp %>% filter(Parameters %in% parm_subset)
+  
+  library(ggplot2)
+  
+  est <- estimate_glmm(obj$model_object)
+  tmp <-  tmp%>%inner_join(est, by = "Parameters", suffix = c("_boot", "_glmm"))
+  
+  tmp %>% 
+    ggplot() + 
+    geom_boxplot(aes(y=Estimates_boot, group=Parameters))+
+    geom_hline(aes(yintercept = Estimates_glmm), color = "blue", lty =2)+
+    facet_wrap(.~Parameters, scales = "free_y" )
+}
+
+plot(rwlb_reps)
 
 parb_reps %>% 
   group_by(Parameters) %>% 
@@ -54,12 +79,7 @@ parb_reps %>%
   ungroup() %>% mutate(Method="parb")
 
 
-rwlb_reps %>% 
-  filter(Parameters == '(Intercept)') %>% 
-  select(Estimates) %>% 
-  boxplot()
-abline(h= est_tmp[est_tmp$Parameters=='(Intercept)','Estimates'], 
-       col = 'blue')
+
 
 parb_reps %>% 
   filter(Parameters == '(Intercept)') %>% 

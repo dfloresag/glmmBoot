@@ -431,37 +431,28 @@ bootstrap_glmm <- function(obj,
 # TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
 confint.glmmBoot <- function(obj, 
                              level = 0.95,
-                             subset_parameters=NULL, 
-                             bootstrap_method = c("rwlb","parb"),
+                             parm_subset=NULL, 
                              bootstrap_type = c("percentile","studentized","norm"), ...) {
   
   tmp <- obj$replicates
   
+  if(!is.null(parm_subset)) tmp <- tmp %>% filter(Parameters %in% parm_subset)
   
-  if(!is.null(subset_parameters)) tmp <- tmp %>% filter(Parameters %in% subset_parameters)
-  
-  boot.type <- match.arg(boot.type)
-  if(boot.type=="percentile"){
-    summary_boot <- tmp %>% 
+  bootstrap_type <- match.arg(bootstrap_type)
+  if(bootstrap_type=="percentile"){
+    sum_boot <- tmp %>% 
       group_by(Parameters) %>%
       summarise(Estimate     = mean(Estimates),
                 Std_Errors   = sd(Estimates), 
                 ci_lower     = quantile(Estimates, prob = (1-level)/2), 
                 ci_upper     = quantile(Estimates, prob = (1+level)/2)) %>% 
       ungroup()
-  } else if (boot.type == "studentized"){
+  } else if (bootstrap_type == "studentized"){
     est <- estimate_glmm(obj$model_object)
     
     tmp <- tmp %>% inner_join(est, by =c("Parameters"),   suffix=c("_star", "_hat"))
     
-    
-    stud_quant <-  function(x_star, sd_x_star, x_hat, sd_x_hat, prob, ...){
-      t_star <-  (x_star-x_hat)/sd_x_star
-      z <-  quantile(t_star, prob, ...)
-      x_hat + z*sd_x_hat
-    }
-    
-    summary_boot <- tmp %>% 
+    sum_boot <- tmp %>% 
       group_by(Parameters) %>%
       summarise(Estimate     = mean(Estimates_star),
                 Std_Errors   = sd(Estimates_star), 
@@ -471,7 +462,7 @@ confint.glmmBoot <- function(obj,
                                              Estimates_hat, Std..Errors_hat, prob = (1+level)/2))) %>% 
       ungroup()
   }
-  summary_boot
+  sum_boot
 }
 
 #' @title show_progress: simulates 
@@ -489,8 +480,13 @@ show_progress <- function(x, B) {
   }
 }
 
+stud_quant <-  function(x_star, sd_x_star, x_hat, sd_x_hat, prob, ...){
+  t_star <-  (x_star-x_hat)/sd_x_star
+  z <-  quantile(t_star, prob, ...)
+  x_hat + z*sd_x_hat
+}
+
 # TODO: 
 # print.glmmBoot <- function(){}
 # summary.glmmBoot <- function(){}
-# confint.glmmBoot <- function(){} 
-
+# plot.glmmBoot <- function(){}
