@@ -362,12 +362,12 @@ simulate_glmm <- function(obj,
 #' @export
 #' @import lme4
 # TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
-bootstrap_glmm <- function(obj.glmerMod, 
+bootstrap_glmm <- function(obj, 
                            B = 1000, 
                            data = epilepsy,
                            method = c("rwlb", "parb")){
   
-  tmp <- extract_info.glmerMod(obj.glmerMod)
+  tmp <- extract_info.glmerMod(obj)
   
   bs_0  <- tmp$bs
   s1_0  <- tmp$s1
@@ -391,7 +391,7 @@ bootstrap_glmm <- function(obj.glmerMod,
         data.frame(
           Replicate = x,
           estimate_glmm(
-            obj = obj,
+            obj,
             weights    =  rexp(n = ng, rate = 1))
         )
       }
@@ -413,7 +413,7 @@ bootstrap_glmm <- function(obj.glmerMod,
   }
   structure(list(
     replicates = dplyr::bind_rows(rep_list),
-    model_object = obj.glmerMod,
+    model_object = obj,
     method = method
   ),
   class = "glmmBoot")

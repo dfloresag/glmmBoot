@@ -23,6 +23,8 @@ in a real-data context. Data comes from the  example found in
 reported by [Faught et. al.
 (1996)](https://www.ncbi.nlm.nih.gov/pubmed/8649570).
 
+## Model
+
 The aim of the study was to verify the effects of an new anti-epileptic
 drug (AED) compared to a placebo on the number of seizures experienced
 by patients during the study. To do this, consider a mixed Poisson model
@@ -44,6 +46,8 @@ correlation coefficient <img src="img/eq05.png" alt="eq05" height="14">
 
 <img src="img/eq06.png" alt="eq06" height="50">
 
+## Analysis
+
 To start performing the analysis, you need:
 
 1.  the following packages:
@@ -52,46 +56,21 @@ To start performing the analysis, you need:
 
 ``` r
 library(lme4)
-```
-
-    ## Loading required package: Matrix
-
-``` r
 library(glmmTMB)
 library(sas7bdat)
 library(TMB)
 library(dplyr)
-```
-
-    ## 
-    ## Attaching package: 'dplyr'
-
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-``` r
 library(ggplot2)
 library(kableExtra)
 ```
 
-    ## 
-    ## Attaching package: 'kableExtra'
-
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     group_rows
-
-2.  to compile `glmm_rirs.cpp` and load the resulting binary:
+2.  to compile `glmm_rirs.cpp` and load the resulting binary into the
+    environment:
 
 <!-- end list -->
 
 ``` r
-compile(file = "glmmBoot/src/glmm_rirs.cpp")  
+compile(file = "glmmBoot/src/glmm_rirs.cpp")
 ```
 
     ## [1] 0
@@ -116,8 +95,13 @@ source("glmmBoot/R/glmmBoot.R")
 epilepsy <- read.sas7bdat(file = "glmmBoot/data/epilepsy.sas7bdat")
 ```
 
-The function `estimate_glmm` uses the frame and estimates of objects
-obtained with `lme4::glmer()` as starting points
+## Implementation
+
+### `estimate_glmm()`
+
+The function `estimate_glmm()` estimates the model with a `TMB` template
+using the frame and estimates of objects of class `glmerMod` as starting
+values. For example:
 
 ``` r
 obj.glmerMod <- lme4::glmer(nseizw~ trt*studyweek + (studyweek|id), 
@@ -126,34 +110,32 @@ obj.glmerMod <- lme4::glmer(nseizw~ trt*studyweek + (studyweek|id),
                             control = glmerControl(optimizer = "bobyqa"))
 ```
 
-For comparison,
+for comparison purposes, let us also extract the estimates of this
+object
 
-``` r
-est_lmer <- extract_estimates(obj.glmerMod)
-est_tmb  <- estimate_glmm(obj.glmerMod)
-```
+A comparison of the estimates yields:
 
 ``` r
 est_lmer %>% 
-  inner_join(est_tmb, by=("Parameters"), suffix=c(" (`glmer`)", " (`TMB`)")) 
+  inner_join(est_tmb, by=("Parameters"), suffix=c(" (glmer)", " (TMB)")) 
 ```
 
-    ##      Parameters Estimates (`glmer`) Std..Errors (`glmer`) Estimates (`TMB`)
-    ## 1   (Intercept)          0.89447741           0.178194833        0.89448617
-    ## 2           trt         -0.24422209           0.253813668       -0.24430762
-    ## 3     studyweek         -0.02714089           0.009853978       -0.02714543
-    ## 4 trt:studyweek          0.01067076           0.013847317        0.01067175
-    ## 5           s_1          1.12722970                    NA        1.12726849
-    ## 6           s_2          0.04871389                    NA        0.04871498
-    ## 7           rho         -0.33394327                    NA       -0.33387552
-    ##   Std..Errors (`TMB`)
-    ## 1         0.178577425
-    ## 2         0.254353981
-    ## 3         0.009920940
-    ## 4         0.013933245
-    ## 5         0.097487567
-    ## 6         0.005702092
-    ## 7         0.131163679
+    ##      Parameters Estimates (glmer) Std..Errors (glmer) Estimates (TMB)
+    ## 1   (Intercept)        0.89447741         0.178194833      0.89448617
+    ## 2           trt       -0.24422209         0.253813668     -0.24430762
+    ## 3     studyweek       -0.02714089         0.009853978     -0.02714543
+    ## 4 trt:studyweek        0.01067076         0.013847317      0.01067175
+    ## 5           s_1        1.12722970                  NA      1.12726849
+    ## 6           s_2        0.04871389                  NA      0.04871498
+    ## 7           rho       -0.33394327                  NA     -0.33387552
+    ##   Std..Errors (TMB)
+    ## 1       0.178577425
+    ## 2       0.254353981
+    ## 3       0.009920940
+    ## 4       0.013933245
+    ## 5       0.097487567
+    ## 6       0.005702092
+    ## 7       0.131163679
 
 The generation of replicates using Random Weighted Laplace Bootstrap
 [(Flores-Agreda and Cantoni, Under
@@ -234,15 +216,17 @@ rwlb_reps %>%
     ## # A tibble: 7 x 5
     ##   Parameters    Estimate Std_Errors ci_lower ci_upper
     ##   <fct>            <dbl>      <dbl>    <dbl>    <dbl>
-    ## 1 (Intercept)     0.896     0.149     0.610   1.19   
-    ## 2 rho            -0.330     0.166    -0.641  -0.00130
-    ## 3 s_1             1.12      0.130     0.891   1.41   
-    ## 4 s_2             0.0473    0.00743   0.0333  0.0626 
-    ## 5 studyweek      -0.0270    0.00867  -0.0446 -0.0104 
-    ## 6 trt            -0.259     0.247    -0.747   0.218  
-    ## 7 trt:studyweek   0.0115    0.0134   -0.0146  0.0370
+    ## 1 (Intercept)     0.896     0.155     0.591   1.21   
+    ## 2 rho            -0.321     0.164    -0.639  -0.00273
+    ## 3 s_1             1.12      0.126     0.906   1.41   
+    ## 4 s_2             0.0475    0.00719   0.0339  0.0622 
+    ## 5 studyweek      -0.0271    0.00903  -0.0451 -0.00988
+    ## 6 trt            -0.253     0.249    -0.716   0.249  
+    ## 7 trt:studyweek   0.0114    0.0138   -0.0170  0.0396
 
-    - and the `studentized` methods
+  - and the `studentized` methods
+
+<!-- end list -->
 
 ``` r
 rwlb_reps %>% 
@@ -252,13 +236,13 @@ rwlb_reps %>%
     ## # A tibble: 7 x 5
     ##   Parameters    Estimate Std_Errors ci_lower ci_upper
     ##   <fct>            <dbl>      <dbl>    <dbl>    <dbl>
-    ## 1 (Intercept)     0.896     0.149     0.618   1.19   
-    ## 2 rho            -0.330     0.166    -0.745  -0.0537 
-    ## 3 s_1             1.12      0.130     0.835   1.34   
-    ## 4 s_2             0.0473    0.00743   0.0313  0.0603 
-    ## 5 studyweek      -0.0270    0.00867  -0.0445 -0.00949
-    ## 6 trt            -0.259     0.247    -0.752   0.206  
-    ## 7 trt:studyweek   0.0115    0.0134   -0.0158  0.0380
+    ## 1 (Intercept)     0.896     0.155     0.592   1.21   
+    ## 2 rho            -0.321     0.164    -0.760  -0.0638 
+    ## 3 s_1             1.12      0.126     0.856   1.34   
+    ## 4 s_2             0.0475    0.00719   0.0321  0.0603 
+    ## 5 studyweek      -0.0271    0.00903  -0.0445 -0.00794
+    ## 6 trt            -0.253     0.249    -0.740   0.258  
+    ## 7 trt:studyweek   0.0114    0.0138   -0.0160  0.0395
 
   - `plot()` : which provides a visualization of the replicates for all
     the parameters or a subset, e.g.
@@ -274,9 +258,11 @@ plot(rwlb_reps,
   theme_classic()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
-    - variances of random effects 
+  - variances of random effects
+
+<!-- end list -->
 
 ``` r
 plot(rwlb_reps, 
@@ -284,4 +270,4 @@ plot(rwlb_reps,
   ggtitle("Replicates of Variance Components")+theme_classic()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
