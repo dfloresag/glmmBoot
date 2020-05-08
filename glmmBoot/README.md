@@ -18,10 +18,9 @@ by patients during the study.
 <!-- % The out- come of interest is the number of epileptic seizures experienced during the last week, i.e., since the last time the outcome was measured. The key re- search question is whether or not the additional new treatment reduces the number of epileptic seizures. -->
 To do this, consider a mixed Poisson model for the outcome containing
 two potentially correlated random effects: one for a random intercept
-and another one for the visit time i.e. \[alt
-text\]\[<https://github.com/dfloresag/glmmBoot/blob/master/glmmBoot/img/eq01.png>\]
-- \(T_{ij}\) represents the effect of the treatment and - \(t_{ij}\) the
-visit time.
+and another one for the visit time i.e. \[eq01\]\[/img/eq01.png\] -
+\[eq01\]\[/img/eq02.png\] represents the effect of the treatment and -
+\[eq01\]\[/img/eq03.png\] the visit time.
 
 The variance-covariance structure of the vector of Normal random effects
 \(\mathbf{u}_i = [u_{i1}, u_{i2}]^T\), comprises a correlation
