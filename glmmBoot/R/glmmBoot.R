@@ -98,14 +98,14 @@ extract_estimates <- function(obj, ... ){
 #' @rdname glmmBoot
 #' @export
 #' @import lme4
-estimate_glmm <- function(obj, 
+estimate_glmm <- function(obj.glmerMod, 
                           data = epilepsy, 
                           weights = NULL,
                           predictions = FALSE,
                           newData= NULL, 
                           maxit = 100, ...){
   
-  tmp <- extract_info.glmerMod(obj)
+  tmp <- extract_info.glmerMod(obj.glmerMod)
   
   bs_0  <- tmp$bs
   s1_0  <- tmp$s1
@@ -362,12 +362,12 @@ simulate_glmm <- function(obj,
 #' @export
 #' @import lme4
 # TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
-bootstrap_glmm <- function(obj, 
+bootstrap_glmm <- function(obj.glmerMod, 
                            B = 1000, 
                            data = epilepsy,
                            method = c("rwlb", "parb")){
   
-  tmp <- extract_info.glmerMod(obj)
+  tmp <- extract_info.glmerMod(obj.glmerMod)
   
   bs_0  <- tmp$bs
   s1_0  <- tmp$s1
@@ -413,7 +413,7 @@ bootstrap_glmm <- function(obj,
   }
   structure(list(
     replicates = dplyr::bind_rows(rep_list),
-    model_object = obj,
+    model_object = obj.glmerMod,
     method = method
   ),
   class = "glmmBoot")
@@ -465,15 +465,38 @@ confint.glmmBoot <- function(obj,
   sum_boot
 }
 
-#' @title show_progress: simulates 
+#' @title plot.glmmBoot: simulates 
 #'
 #' @param obj Object of class `glmerMod` resulting from estimation with `lme4::glmer()`
 #' @param data Original dataset. TODO: make it general by extracting it from `obj`
 #' @param ... other arguments 
 #' @examples
 #' @rdname glmmBoot
+#' @export
 #' @import lme4
 # TODO : adapt this function to retrieve parameters resulting from *the template* and not the glmerMod object
+plot.glmmBoot <- function(obj, parm_subset = NULL, ...){
+  
+  # TODO: separate between fixed and random effect parameters
+  
+  tmp <- obj$replicates
+  
+  if(!is.null(parm_subset)) tmp <- tmp %>% filter(Parameters %in% parm_subset)
+  
+  library(ggplot2)
+  
+  est <- estimate_glmm(obj$model_object)
+  tmp <-  tmp%>%inner_join(est, by = "Parameters", suffix = c("_boot", "_glmm"))
+  
+  tmp %>% 
+    ggplot() + 
+    geom_boxplot(aes(y=Estimates_boot, group=Parameters))+
+    geom_hline(aes(yintercept = Estimates_glmm), color = "blue", lty =2)+
+    facet_wrap(.~Parameters, scales = "free_y" )+
+    ylab(label = "Bootstrap Replicates")
+}
+
+#### Internal functions ####
 show_progress <- function(x, B) {
   if (x%%(B/20)==0) {
     message("Progress: ", paste(rep("=", times=(x/(B/20)))), paste(rep(" ", times=(20-x/(B/20)))), x/B*100,"%")
@@ -485,6 +508,9 @@ stud_quant <-  function(x_star, sd_x_star, x_hat, sd_x_hat, prob, ...){
   z <-  quantile(t_star, prob, ...)
   x_hat + z*sd_x_hat
 }
+
+
+
 
 # TODO: 
 # print.glmmBoot <- function(){}

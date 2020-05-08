@@ -29,49 +29,56 @@ The variance-covariance structure of the vector of Normal random effects <img sr
 
 <img src="img/eq06.png" alt="eq06" height="50"> 
 
-To start performing the analysis, you need the following packages in the 
+To start performing the analysis, you need:
 
-```{r}
+1. the following packages:
+```{r, warning=FALSE, messages=FALSE}
 library(lme4)
 library(glmmTMB)
 library(sas7bdat)
 library(TMB)
 library(dplyr)
 library(ggplot2)
+library(kableExtra)
 ```
 
-```{r}
+2. to compile `glmm_rirs.cpp` and load the resulting binary:
+```{r, messages = FALSE}
 compile(file = "glmmBoot/src/glmm_rirs.cpp")  
 dyn.load(dynlib("glmmBoot/src/glmm_rirs"))
+```
 
+3. the functions in the file `glmmBoot.R`:
+```{r}
 source("glmmBoot/R/glmmBoot.R")
 ```
 
+4. the dataset `epilepsy.sas7bdat`
 ```{r}
 epilepsy <- read.sas7bdat(file = "glmmBoot/data/epilepsy.sas7bdat")
 ```
 
-
+The function `estimate_glmm` uses the frame and estimates of objects obtained with `lme4::glmer()` as starting points 
 ```{r}
-obj.glmerMod <- glmer(nseizw~ trt*studyweek + (studyweek|id), 
-                      family = "poisson",
-                      data = epilepsy, 
-                      control = glmerControl(optimizer = "bobyqa"))
+obj.glmerMod <- lme4::glmer(nseizw~ trt*studyweek + (studyweek|id), 
+                            family = "poisson",
+                            data = epilepsy, 
+                            control = glmerControl(optimizer = "bobyqa"))
+```
 
-## glmmTMB estimation ####
-
-obj.glmmTMB <- glmmTMB(nseizw~ trt*studyweek + (studyweek|id), 
-                       family = "poisson",
-                       data = epilepsy)
+For comparison,  
+```{r}
+est_lmer <- extract_estimates(obj.glmerMod)
+est_tmb  <- estimate_glmm(obj.glmerMod)
 ```
 
 
 ```{r}
-estimates_1 <-  extract_estimates(obj.glmerMod)
-estimates_2 <-  extract_estimates(obj.glmmTMB)
-estimates_3 <-  estimate_glmm(obj.glmerMod)
+est_lmer %>% 
+  inner_join(est_tmb, by=("Parameters"), suffix=c(" (`glmer`)", " (`TMB`)")) 
 ```
 
+The generation of replicates using Random Weighted Laplace Bootstrap [(Flores-Agreda and Cantoni, Under Review)](https://www.researchgate.net/publication/315768128_Bootstrapping_Generalized_Linear_Mixed_Models_via_a_Weighted_Laplace_Approximation) is carried by the function `bootstrap_glmm()`, with the option `method=rwlb`. 
 ```{r}
 ## Bootstrap inference 
 rwlb_reps <- bootstrap_glmm(obj.glmerMod,
@@ -79,12 +86,42 @@ rwlb_reps <- bootstrap_glmm(obj.glmerMod,
                             method = "rwlb")
 ```
 
-```{r}
-rwlb_reps %>% confint(bootstrap_type = "percentile")
-```
+The resulting Bootstrap replicates are stored in an object of the class `glmmBoot`, which can be used to construct 
+
+- Estimates of the Parameters: by averaging over the replicates
+- Estimates of the Standard Errors: by computing the standard deviations for the replicates and 
+- Percentile-based Confidence Intervals (CI) with a level of 95%.
+
+We have implemented the following 
+
+- `confint()` : which produces bootstrap estimates, standard errors and confidence intervals with the 
+    - the `percentile` 
 
 ```{r}
-rwlb_reps %>% confint(bootstrap_type = "studentized")
+rwlb_reps %>% 
+  confint(bootstrap_type = "percentile")
+```
+    - and the `studentized` methods
+```{r}
+rwlb_reps %>% 
+  confint(bootstrap_type = "studentized")
 ```
 
-The Bootstrap distributions were then used to construct (i) Estimates of the Parameters, by averaging over the replicates (ii) Estimates of the Standard Errors by computing the standard deviations for each distribution and (iii) percentile-based Confidence Intervals (CI) with a level of 95%.
+- `plot()` : which provides a visualization of the replicates for all the parameters or a subset, e.g. 
+    
+    - fixed effect parameters
+```{r}
+plot(rwlb_reps, 
+     parm_subset=c("(Intercept)", "trt", "studyweek", "trt:studyweek")) + 
+  ggtitle("Replicates of Fixed Effects") +
+  theme_classic()
+```
+
+    - variances of random effects 
+```{r}
+plot(rwlb_reps, 
+     parm_subset=c("s_1", "s_2", "rho")) + 
+  ggtitle("Replicates of Variance Components")+theme_classic()
+```
+
+

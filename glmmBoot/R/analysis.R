@@ -44,31 +44,15 @@ parb_reps <- bootstrap_glmm(obj.glmerMod,
 
 rwlb_reps %>% confint(bootstrap_type = "percentile") 
 parb_reps %>% confint(bootstrap_type = "percentile")
+
 rwlb_reps %>% confint(bootstrap_type = "studentized")
 parb_reps %>% confint(bootstrap_type = "studentized")
 
+plot(rwlb_reps, parm_subset=c("(Intercept)", "trt", "studyweek", "trt:studyweek")) + 
+  ggtitle("Replicates of Fixed Effects") +theme_classic()
 
-plot.glmmBoot <- function(obj, parm_subset = NULL, ...){
-
-  # TODO: separate between fixed and random effect parameters
-  
-  tmp <- obj$replicates
-  
-  if(!is.null(parm_subset)) tmp <- tmp %>% filter(Parameters %in% parm_subset)
-  
-  library(ggplot2)
-  
-  est <- estimate_glmm(obj$model_object)
-  tmp <-  tmp%>%inner_join(est, by = "Parameters", suffix = c("_boot", "_glmm"))
-  
-  tmp %>% 
-    ggplot() + 
-    geom_boxplot(aes(y=Estimates_boot, group=Parameters))+
-    geom_hline(aes(yintercept = Estimates_glmm), color = "blue", lty =2)+
-    facet_wrap(.~Parameters, scales = "free_y" )
-}
-
-plot(rwlb_reps)
+plot(rwlb_reps, parm_subset=c("s_1", "s_2", "rho")) + 
+  ggtitle("Replicates of Variance Components")+theme_classic()
 
 parb_reps %>% 
   group_by(Parameters) %>% 
