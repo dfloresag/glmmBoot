@@ -10,13 +10,13 @@ The aim of the study was to verify the effects of an new anti-epileptic drug (AE
 <!-- 89 Patients were assigned to either group (placebo or treatment), measured on a weekly basis and followed during 16 weeks, after which they were entered into a longer-term study with the number of visits ranging between 2 and 27 weeks, hence making clusters variable in size. -->
 <!-- % The out- come of interest is the number of epileptic seizures experienced during the last week, i.e., since the last time the outcome was measured. The key re- search question is whether or not the additional new treatment reduces the number of epileptic seizures. -->
 To do this, consider a mixed Poisson model for the outcome containing two potentially correlated random effects: one for a random intercept and another one for the visit time i.e. 
-![eq01][/img/eq01.png]
-- ![eq01][/img/eq02.png] represents the effect of the treatment and 
-- ![eq01][/img/eq03.png] the visit time. 
+![](img/eq01.png)
+- ![](img/eq02.png) represents the effect of the treatment and 
+- ![](img/eq03.png) the visit time. 
 
-The variance-covariance structure of the vector of Normal random effects $\mathbf{u}_i = [u_{i1}, u_{i2}]^T$, comprises a  correlation coefficient $\rho$, i.e. 
+The variance-covariance structure of the vector of Normal random effects ![](img/eq04.png), comprises a  correlation coefficient ![](img/eq05.png), i.e. 
 
-$$\mathbf{\Delta}(\mathbf{\sigma}) = \left[\begin{array}{c c} \sigma_{1}^2 & \rho\sigma_{1}\sigma_{2} \\  \rho\sigma_{1}\sigma_{2} & \sigma_{2}^2 \end{array}\right]$$.
+![](img/eq06.png)
 
 
 
