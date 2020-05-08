@@ -11,10 +11,11 @@ knitr::opts_chunk$set(cache = TRUE)
 
 At this stage of development it can handle Mixed Logit and Mixed Poisson Models, yet it has the potential of being extended intended to handle a wide range of statistical distributions. Fixed and random effects models can be specified for the conditional and zero-inflated components of the model, as well as fixed effects models for the dispersion parameter. 
 
-
 # Mixed Poisson Example
 
 This code to illustrates the implementation of the bootstrapping methods described in [(Flores-Agreda and Cantoni, Under Review)](https://www.researchgate.net/publication/315768128_Bootstrapping_Generalized_Linear_Mixed_Models_via_a_Weighted_Laplace_Approximation) in a real-data context. Data comes from the \emph{Epilepsy} example found in [Molenberghs & Verbeke (2006)](https://www.springer.com/gp/book/9780387251448) initially reported by [Faught et. al. (1996)](https://www.ncbi.nlm.nih.gov/pubmed/8649570). 
+
+## Model
 
 The aim of the study was to verify the effects of an new anti-epileptic drug (AED) compared to a placebo on the number of seizures experienced by patients during the study. To do this, consider a mixed Poisson model for the outcome containing two potentially correlated random effects: one for a random intercept and another one for the visit time i.e. 
 
@@ -29,10 +30,12 @@ The variance-covariance structure of the vector of Normal random effects <img sr
 
 <img src="img/eq06.png" alt="eq06" height="50"> 
 
+## Analysis
+
 To start performing the analysis, you need:
 
 1. the following packages:
-```{r, warning=FALSE, messages=FALSE}
+```{r, message=FALSE, warnings=FALSE}
 library(lme4)
 library(glmmTMB)
 library(sas7bdat)
@@ -42,9 +45,12 @@ library(ggplot2)
 library(kableExtra)
 ```
 
-2. to compile `glmm_rirs.cpp` and load the resulting binary:
-```{r, messages = FALSE}
-compile(file = "glmmBoot/src/glmm_rirs.cpp")  
+2. to compile `glmm_rirs.cpp` and load the resulting binary into the environment:
+```{r, message=FALSE}
+compile(file = "glmmBoot/src/glmm_rirs.cpp")
+```
+
+```{r, message=FALSE}
 dyn.load(dynlib("glmmBoot/src/glmm_rirs"))
 ```
 
@@ -58,24 +64,26 @@ source("glmmBoot/R/glmmBoot.R")
 epilepsy <- read.sas7bdat(file = "glmmBoot/data/epilepsy.sas7bdat")
 ```
 
-The function `estimate_glmm` uses the frame and estimates of objects obtained with `lme4::glmer()` as starting points 
+## Implementation
+
+### `estimate_glmm()`
+
+The function `estimate_glmm()` estimates the model with a `TMB` template using the frame and estimates of objects of class `glmerMod` as starting values. For example: 
 ```{r}
 obj.glmerMod <- lme4::glmer(nseizw~ trt*studyweek + (studyweek|id), 
                             family = "poisson",
                             data = epilepsy, 
                             control = glmerControl(optimizer = "bobyqa"))
 ```
-
-For comparison,  
-```{r}
+for comparison purposes, let us also extract the estimates of this object
+```{r, include = FALSE}
 est_lmer <- extract_estimates(obj.glmerMod)
 est_tmb  <- estimate_glmm(obj.glmerMod)
 ```
-
-
+A comparison of the estimates yields:
 ```{r}
 est_lmer %>% 
-  inner_join(est_tmb, by=("Parameters"), suffix=c(" (`glmer`)", " (`TMB`)")) 
+  inner_join(est_tmb, by=("Parameters"), suffix=c(" (glmer)", " (TMB)")) 
 ```
 
 The generation of replicates using Random Weighted Laplace Bootstrap [(Flores-Agreda and Cantoni, Under Review)](https://www.researchgate.net/publication/315768128_Bootstrapping_Generalized_Linear_Mixed_Models_via_a_Weighted_Laplace_Approximation) is carried by the function `bootstrap_glmm()`, with the option `method=rwlb`. 
@@ -101,7 +109,7 @@ We have implemented the following
 rwlb_reps %>% 
   confint(bootstrap_type = "percentile")
 ```
-    - and the `studentized` methods
+  - and the `studentized` methods
 ```{r}
 rwlb_reps %>% 
   confint(bootstrap_type = "studentized")
@@ -117,7 +125,7 @@ plot(rwlb_reps,
   theme_classic()
 ```
 
-    - variances of random effects 
+  - variances of random effects 
 ```{r}
 plot(rwlb_reps, 
      parm_subset=c("s_1", "s_2", "rho")) + 
