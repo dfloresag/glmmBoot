@@ -200,11 +200,14 @@ The resulting Bootstrap replicates are stored in an object of the class
     deviations for the replicates and
   - Percentile-based Confidence Intervals (CI) with a level of 95%.
 
-We have implemented the following
+## Methods
 
-  - `confint()` : which produces bootstrap estimates, standard errors
-    and confidence intervals with the
-      - the `percentile`
+### `confint()`
+
+produces bootstrap estimates, standard errors and confidence intervals
+with the `percentile` and `studentized` methods
+
+  - Example of the percentile method
 
 <!-- end list -->
 
@@ -224,7 +227,7 @@ rwlb_reps %>%
     ## 6 trt            -0.253     0.249    -0.716   0.249  
     ## 7 trt:studyweek   0.0114    0.0138   -0.0170  0.0396
 
-  - and the `studentized` methods
+  - Example of the studentized method
 
 <!-- end list -->
 
@@ -244,10 +247,12 @@ rwlb_reps %>%
     ## 6 trt            -0.253     0.249    -0.740   0.258  
     ## 7 trt:studyweek   0.0114    0.0138   -0.0160  0.0395
 
-  - `plot()` : which provides a visualization of the replicates for all
-    the parameters or a subset, e.g.
-    
-      - fixed effect parameters
+### `plot()`
+
+Shows the boxplots of the replicates for all the parameters or a subset
+with a line describing the TMB estimates
+
+  - fixed effect parameters
 
 <!-- end list -->
 

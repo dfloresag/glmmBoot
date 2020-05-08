@@ -100,24 +100,31 @@ The resulting Bootstrap replicates are stored in an object of the class `glmmBoo
 - Estimates of the Standard Errors: by computing the standard deviations for the replicates and 
 - Percentile-based Confidence Intervals (CI) with a level of 95%.
 
-We have implemented the following 
+## Methods
 
-- `confint()` : which produces bootstrap estimates, standard errors and confidence intervals with the 
-    - the `percentile` 
+
+### `confint()` 
+
+produces bootstrap estimates, standard errors and confidence intervals with the `percentile` and `studentized` methods
+
+- Example of the percentile method
 
 ```{r}
 rwlb_reps %>% 
   confint(bootstrap_type = "percentile")
 ```
-  - and the `studentized` methods
+
+- Example of the studentized method
 ```{r}
 rwlb_reps %>% 
   confint(bootstrap_type = "studentized")
 ```
 
-- `plot()` : which provides a visualization of the replicates for all the parameters or a subset, e.g. 
+### `plot()` 
+
+Shows the boxplots of the replicates for all the parameters or a subset with a line describing the TMB estimates
     
-    - fixed effect parameters
+- fixed effect parameters
 ```{r}
 plot(rwlb_reps, 
      parm_subset=c("(Intercept)", "trt", "studyweek", "trt:studyweek")) + 
@@ -125,7 +132,7 @@ plot(rwlb_reps,
   theme_classic()
 ```
 
-  - variances of random effects 
+- variances of random effects 
 ```{r}
 plot(rwlb_reps, 
      parm_subset=c("s_1", "s_2", "rho")) + 
