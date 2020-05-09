@@ -9,26 +9,12 @@ knitr::opts_chunk$set(cache = TRUE)
 
 `glmmBoot` consists of a series of tools that for fitting and bootstrapping generalized linear mixed models (GLMMs) that takes advantage of the Template Model Builder (`TMB`), built on` CppAD` and `Eigen`. 
 
-At this stage of development it can handle Mixed Logit and Mixed Poisson Models, yet it has the potential of being extended intended to handle a wide range of statistical distributions. Fixed and random effects models can be specified for the conditional and zero-inflated components of the model, as well as fixed effects models for the dispersion parameter. 
+At this stage of development it can handle Mixed Logit and Mixed Poisson Models, yet it has the potential of being extended intended to handle a wide range of statistical distributions. 
 
 # Mixed Poisson Example
 
 This code to illustrates the implementation of the bootstrapping methods described in [(Flores-Agreda and Cantoni, Under Review)](https://www.researchgate.net/publication/315768128_Bootstrapping_Generalized_Linear_Mixed_Models_via_a_Weighted_Laplace_Approximation) in a real-data context. Data comes from the \emph{Epilepsy} example found in [Molenberghs & Verbeke (2006)](https://www.springer.com/gp/book/9780387251448) initially reported by [Faught et. al. (1996)](https://www.ncbi.nlm.nih.gov/pubmed/8649570). 
 
-## Model
-
-The aim of the study was to verify the effects of an new anti-epileptic drug (AED) compared to a placebo on the number of seizures experienced by patients during the study. To do this, consider a mixed Poisson model for the outcome containing two potentially correlated random effects: one for a random intercept and another one for the visit time i.e. 
-
-<img src="img/eq01.png" alt="eq01" height="25">
-
-where:
-
-- <img src="img/eq02.png" alt="eq02" height="20"> represents the effect of the treatment and 
-- <img src="img/eq03.png" alt="eq03" height="20"> the visit time. 
-
-The variance-covariance structure of the vector of Normal random effects <img src="img/eq04.png" alt="eq04" height="20"> , comprises a  correlation coefficient <img src="img/eq05.png" alt="eq05" height="14"> , i.e. 
-
-<img src="img/eq06.png" alt="eq06" height="50"> 
 
 ## Analysis
 
@@ -42,7 +28,6 @@ library(sas7bdat)
 library(TMB)
 library(dplyr)
 library(ggplot2)
-library(kableExtra)
 ```
 
 2. to compile `glmm_rirs.cpp` and load the resulting binary into the environment:
@@ -63,80 +48,4 @@ source("glmmBoot/R/glmmBoot.R")
 ```{r}
 epilepsy <- read.sas7bdat(file = "glmmBoot/data/epilepsy.sas7bdat")
 ```
-
-## Implementation
-
-### `estimate_glmm()`
-
-The function `estimate_glmm()` estimates the model with a `TMB` template using the frame and estimates of objects of class `glmerMod` as starting values. For example: 
-```{r}
-obj.glmerMod <- lme4::glmer(nseizw~ trt*studyweek + (studyweek|id), 
-                            family = "poisson",
-                            data = epilepsy, 
-                            control = glmerControl(optimizer = "bobyqa"))
-```
-for comparison purposes, let us also extract the estimates of this object
-```{r, include = FALSE}
-est_lmer <- extract_estimates(obj.glmerMod)
-est_tmb  <- estimate_glmm(obj.glmerMod)
-```
-A comparison of the estimates yields:
-```{r}
-est_lmer %>% 
-  inner_join(est_tmb, by=("Parameters"), suffix=c(" (glmer)", " (TMB)")) 
-```
-
-The generation of replicates using Random Weighted Laplace Bootstrap [(Flores-Agreda and Cantoni, Under Review)](https://www.researchgate.net/publication/315768128_Bootstrapping_Generalized_Linear_Mixed_Models_via_a_Weighted_Laplace_Approximation) is carried by the function `bootstrap_glmm()`, with the option `method=rwlb`. 
-```{r}
-## Bootstrap inference 
-rwlb_reps <- bootstrap_glmm(obj.glmerMod,
-                            B = 1000,
-                            method = "rwlb")
-```
-
-The resulting Bootstrap replicates are stored in an object of the class `glmmBoot`, which can be used to construct 
-
-- Estimates of the Parameters: by averaging over the replicates
-- Estimates of the Standard Errors: by computing the standard deviations for the replicates and 
-- Percentile-based Confidence Intervals (CI) with a level of 95%.
-
-## Methods
-
-
-### `confint()` 
-
-produces bootstrap estimates, standard errors and confidence intervals with the `percentile` and `studentized` methods
-
-- Example of the percentile method
-
-```{r}
-rwlb_reps %>% 
-  confint(bootstrap_type = "percentile")
-```
-
-- Example of the studentized method
-```{r}
-rwlb_reps %>% 
-  confint(bootstrap_type = "studentized")
-```
-
-### `plot()` 
-
-Shows the boxplots of the replicates for all the parameters or a subset with a line describing the TMB estimates
-    
-- fixed effect parameters
-```{r}
-plot(rwlb_reps, 
-     parm_subset=c("(Intercept)", "trt", "studyweek", "trt:studyweek")) + 
-  ggtitle("Replicates of Fixed Effects") +
-  theme_classic()
-```
-
-- variances of random effects 
-```{r}
-plot(rwlb_reps, 
-     parm_subset=c("s_1", "s_2", "rho")) + 
-  ggtitle("Replicates of Variance Components")+theme_classic()
-```
-
 

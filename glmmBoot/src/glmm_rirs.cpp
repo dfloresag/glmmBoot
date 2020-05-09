@@ -9,7 +9,6 @@
   DATA_MATRIX(X);
   DATA_VECTOR(w);         
   DATA_VECTOR(t);      
-  
   DATA_INTEGER(family);
   PARAMETER_MATRIX(u);     
   PARAMETER_VECTOR(betas);   
